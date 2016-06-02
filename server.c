@@ -92,6 +92,7 @@ void *process_thread(void *arg)
 	struct thread_data *data = (struct thread_data *)arg;
 	char buf[BUFF_SIZE], m_name[NAME_MAX], t_name[NAME_MAX];
 	char *recv_buf;
+	int i;
 
 	while (1) {
 		pthread_mutex_lock(&data->mutex);
@@ -108,7 +109,7 @@ void *process_thread(void *arg)
 		for (;;) {
 			recv_num = recv(sock_fd, recv_buf, BUFF_SIZE, 0);
 			err_printf(LOG_DEBUG, "%d recved %d message", sock_fd, recv_num);
-			for ( int i = 0; i < RECV_MIN; i++) {
+			for (i = 0; i < RECV_MIN; i++) {
 				err_printf(LOG_DEBUG, "0x%2x ", buf[i]);
 			}
 			err_printf(LOG_DEBUG, "\n");
