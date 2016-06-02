@@ -11,26 +11,7 @@
 #include <stdarg.h>
 #include "hash.h"
 #include "server.h"
-
-static int log_level = LOG_ERR; 
-void err_printf(int level, const char *string, ...)
-{	
-	va_list arg;
-	char buffer[2048];
-	va_start(arg, string);
-	vsprintf(buffer, string, arg); 
-	va_end(arg);
-	if (level < LOG_DEBUG)
-		syslog(level, "%s", buffer);
-	if (level <= log_level) {
-		if (level <= LOG_ERR) {
-			fprintf(stderr, "%s", buffer);
-		} else {
-			fprintf(stdout, "%s", buffer);
-			fflush(stdout);
-		}
-	}
-}
+#include "log.h"
 
 void *accept_thread(void *arg)
 {
@@ -47,15 +28,15 @@ void *accept_thread(void *arg)
 	
 	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock < 0) {
-		err_printf(LOG_CRIT, "%s %d:create socked failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "%s %d:create socked failed, %s\n", __FILE__, __LINE__, strerror(errno));
 		exit(1);
 	}
 	if (bind(listen_sock, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0) {
-		err_printf(LOG_CRIT, "%s %d:bind socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "%s %d:bind socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
 		exit(1);
 	}
 	if (listen(listen_sock, data->max_user) < 0) {
-		err_printf(LOG_CRIT, "%s %d:listen socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "%s %d:listen socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
 		exit(1);
 	}
 	sleep(1); 
@@ -68,10 +49,10 @@ void *accept_thread(void *arg)
 			data->new_user_fd = accept(listen_sock, (struct sockaddr *)&client_addr, &sock_len);
 			if (data->new_user_fd < 0) {
 				data->new_user_fd = 0;
-				err_printf(LOG_ERR, "%s %d: accpet new socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+				log_printf(LOG_ERR, "%s %d: accpet new socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
 				continue;
 			}
-			err_printf(LOG_DEBUG, "%s %d: Create sock fd %d\n", __FILE__, __LINE__, data->new_user_fd);
+			log_printf(LOG_DEBUG, "%s %d: Create sock fd %d\n", __FILE__, __LINE__, data->new_user_fd);
 			pthread_mutex_lock(&data->mutex);
 			data->user_count++;
 			pthread_cond_signal(&data->cond);
@@ -79,7 +60,7 @@ void *accept_thread(void *arg)
 			
 		} else {
 			pthread_mutex_unlock(&data->mutex);
-			err_printf(LOG_WARNING, "%s %d: Server is now full\n", __FILE__, __LINE__);
+			log_printf(LOG_WARNING, "%s %d: Server is now full\n", __FILE__, __LINE__);
 			usleep(10);
 		} 	
 	}
@@ -108,11 +89,11 @@ void *process_thread(void *arg)
 		recv_buf = buf;
 		for (;;) {
 			recv_num = recv(sock_fd, recv_buf, BUFF_SIZE, 0);
-			err_printf(LOG_DEBUG, "%d recved %d message", sock_fd, recv_num);
+			log_printf(LOG_DEBUG, "%d recved %d message", sock_fd, recv_num);
 			for (i = 0; i < RECV_MIN; i++) {
-				err_printf(LOG_DEBUG, "0x%2x ", buf[i]);
+				log_printf(LOG_DEBUG, "0x%2x ", buf[i]);
 			}
-			err_printf(LOG_DEBUG, "\n");
+			log_printf(LOG_DEBUG, "\n");
 			if (recv_num == 0) {
 				if (reg_flag)
 					hash_rm_user_by_name(data->hash, m_name);
@@ -122,7 +103,7 @@ void *process_thread(void *arg)
 				switch (buf[2]) {
 				case SOCK_REG:
 					memcpy(m_name, &buf[3], NAME_MAX);
-					err_printf(LOG_INFO, "Add user (%s), fd = %d\n", m_name, sock_fd);
+					log_printf(LOG_INFO, "Add user (%s), fd = %d\n", m_name, sock_fd);
 					hash_add_user(data->hash, m_name, sock_fd);
 					reg_flag = 1;
 					break;
@@ -130,12 +111,12 @@ void *process_thread(void *arg)
 					memcpy(t_name, &buf[3], NAME_MAX);
 					memcpy(&buf[3], m_name, NAME_MAX);
 					recv_fd = hash_get_fd_by_name(data->hash, t_name);
-					err_printf(LOG_DEBUG, "try to Send to %s by fd = %d\n", t_name, recv_fd);
+					log_printf(LOG_DEBUG, "try to Send to %s by fd = %d\n", t_name, recv_fd);
 					if (recv_fd <= 0) {
 						//return error to the client.
 						send(sock_fd, recv_buf, BUFF_SIZE, 0);
 					}
-					err_printf(LOG_DEBUG, "sending to %d: %s\n", recv_fd, &buf[RECV_MIN]);
+					log_printf(LOG_DEBUG, "sending to %d: %s\n", recv_fd, &buf[RECV_MIN]);
 					send(recv_fd, buf, recv_num, 0);
 					break;
 				default:
@@ -158,12 +139,12 @@ int main(int argc, char *argv[])
 	int max_user, i;
 	
 	if (argc !=2) {
-		err_printf(LOG_CRIT, "Usage: %s max_user\n", argv[0]);
+		log_printf(LOG_CRIT, "Usage: %s max_user\n", argv[0]);
 		return 1;
 	}
 	sscanf(argv[1], "%d", &max_user);
 
-	err_printf(LOG_DEBUG, "max_user = %d\n", max_user);
+	log_printf(LOG_DEBUG, "max_user = %d\n", max_user);
 
 	memset(&data, 0, sizeof(data));	
 
@@ -173,24 +154,24 @@ int main(int argc, char *argv[])
 	data.hash = hash_init(max_user);
 
 	if (data.hash == NULL) {
-		err_printf(LOG_CRIT, "Fail to create hash table!\n");
+		log_printf(LOG_CRIT, "Fail to create hash table!\n");
 		return 1;
 	}
 
 	client_thread = (pthread_t *)malloc(sizeof(pthread_t) * max_user);
 	if (NULL == client_thread) {
-		err_printf(LOG_CRIT, "Fail to alloc buff for client threads!");
+		log_printf(LOG_CRIT, "Fail to alloc buff for client threads!");
 		return 1;
 	}
 
 	if (pthread_create(&server_thread, NULL, accept_thread,(void *)&data)) {
-		err_printf(LOG_CRIT, "create server thread failed\n");
+		log_printf(LOG_CRIT, "create server thread failed\n");
 		return 1;
 	}
 
 	for (i = 0;i < max_user;i++) {
 		if (pthread_create(&client_thread[i], NULL, process_thread, (void *)&data)) {
-			err_printf(LOG_CRIT, "Create client thread %d failed\n", i);
+			log_printf(LOG_CRIT, "Create client thread %d failed\n", i);
 			return 1;
 		}
 	}

@@ -7,8 +7,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include "../server.h"
 #include <unistd.h>
+
+#include "server.h"
 
 int main(int argc, char *argv[])
 {

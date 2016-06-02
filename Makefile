@@ -1,5 +1,19 @@
+ARCH          ?=
+CROSS_COMPILE ?=
+
+TOPDIR=$(PWD)
+export TOPDIR
+
+include .config
+
 all:
-	gcc server.c hash.c -o IPC_server -lpthread
+	$(MAKE) all -e -C lib 
+	$(MAKE) all -e -C boards/$(CONFIG_BOARD)
+	$(MAKE) all -e -C proxy_server
+	$(MAKE) all -e -C web_server
+
 clean:
-	rm -rf IPC_server
-	rm -rf client
+	$(MAKE) clean -e -C lib 
+	$(MAKE) clean -e -C boards/$(CONFIG_BOARD)
+	$(MAKE) clean -e -C proxy_server
+	$(MAKE) clean -e -C web_server
