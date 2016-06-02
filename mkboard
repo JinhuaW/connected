@@ -1,0 +1,15 @@
+#!/bin/sh
+
+board_name=$1
+
+if [ x"$board_name" = "x" ]; then
+	echo "Usage: `basename $0` <board name> "
+	exit 1
+fi
+
+echo "#include <${board_name}_config.h>" > include/config.h
+cp configs/${board_name}_defconfig .config
+
+echo "set board $board_name successful"
+
+exit 0
