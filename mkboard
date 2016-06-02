@@ -7,6 +7,7 @@ if [ x"$board_name" = "x" ]; then
 	exit 1
 fi
 
+mkdir -p include
 echo "#include <${board_name}_config.h>" > include/config.h
 cp configs/${board_name}_defconfig .config
 
