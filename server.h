@@ -4,11 +4,14 @@
 #define SOCK_SND 0x01
 #define ERR_NOFD 0x02
 #define NAME_MAX 16
+
 #define MAGIC_SIZE 2
 #define CMD_SIZE 1
 #define RECV_MIN (NAME_MAX + CMD_SIZE + MAGIC_SIZE)
 #define BUFF_SIZE 1024
+
 #define SERVICE_PORT 5555
+
 struct thread_data {
 	struct usr_hash *hash;
 	pthread_cond_t cond;
