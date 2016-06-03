@@ -1,11 +1,12 @@
-SRCS := server.c hash.c
+SRCS := $(shell ls *.c)
 OBJS := $(SRCS:%.c=%.o)
 
-CFLAGS += -I$(TOPDIR)/lib/include
+COMMON_OBJS += ../common/command.o
 
-LIBS += -lpthread -lx
+LIBS += -lx
 
-PROGRAM=proxy_server
+
+PROGRAM=yunuo
 
 all: $(PROGRAM)
 
@@ -13,5 +14,5 @@ clean:
 	@rm -rf $(OBJS)
 	@rm -rf $(PROGRAM)
 
-$(PROGRAM): $(OBJS)
+$(PROGRAM): $(OBJS) $(COMMON_OBJS) 
 	$(CC) $(LIBPATH) -o $@ $^ $(LIBS)
