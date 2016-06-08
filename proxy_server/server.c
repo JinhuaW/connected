@@ -10,33 +10,19 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "hash.h"
+#include "conu.h"
 #include "server.h"
 #include "log.h"
 
 void *accept_thread(void *arg)
 {
 	struct thread_data *data = (struct thread_data *)arg;
-	struct sockaddr_in host_addr;
 	struct sockaddr_in client_addr;
 	int listen_sock = 0;
 	int sock_len = sizeof(client_addr);
 
-	memset((void *)&host_addr, 0, sizeof(struct sockaddr_in));
-	host_addr.sin_family = AF_INET;
-	host_addr.sin_port = htons(SERVICE_PORT);
-	host_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	
-	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+	listen_sock = new_server(SERVICE_PORT, data->max_user);
 	if (listen_sock < 0) {
-		log_printf(LOG_CRIT, "%s %d:create socked failed, %s\n", __FILE__, __LINE__, strerror(errno));
-		exit(1);
-	}
-	if (bind(listen_sock, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0) {
-		log_printf(LOG_CRIT, "%s %d:bind socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
-		exit(1);
-	}
-	if (listen(listen_sock, data->max_user) < 0) {
-		log_printf(LOG_CRIT, "%s %d:listen socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
 		exit(1);
 	}
 	sleep(1); 
@@ -69,11 +55,8 @@ void *accept_thread(void *arg)
 
 void *process_thread(void *arg)
 {
-	int sock_fd, recv_num, recv_fd, reg_flag;
+	int sock_fd;
 	struct thread_data *data = (struct thread_data *)arg;
-	char buf[BUFF_SIZE], m_name[NAME_MAX], t_name[NAME_MAX];
-	char *recv_buf;
-	int i;
 
 	while (1) {
 		pthread_mutex_lock(&data->mutex);
@@ -85,45 +68,7 @@ void *process_thread(void *arg)
 			usleep(10);
 		sock_fd = data->new_user_fd;
 		data->new_user_fd = 0;
-		reg_flag = 0;
-		recv_buf = buf;
-		for (;;) {
-			recv_num = recv(sock_fd, recv_buf, BUFF_SIZE, 0);
-			log_printf(LOG_DEBUG, "%d recved %d message", sock_fd, recv_num);
-			for (i = 0; i < RECV_MIN; i++) {
-				log_printf(LOG_DEBUG, "0x%2x ", buf[i]);
-			}
-			log_printf(LOG_DEBUG, "\n");
-			if (recv_num == 0) {
-				if (reg_flag)
-					hash_rm_user_by_name(data->hash, m_name);
-				close(sock_fd);
-				break;
-			} else {
-				switch (buf[2]) {
-				case SOCK_REG:
-					memcpy(m_name, &buf[3], NAME_MAX);
-					log_printf(LOG_INFO, "Add user (%s), fd = %d\n", m_name, sock_fd);
-					hash_add_user(data->hash, m_name, sock_fd);
-					reg_flag = 1;
-					break;
-				case SOCK_SND:
-					memcpy(t_name, &buf[3], NAME_MAX);
-					memcpy(&buf[3], m_name, NAME_MAX);
-					recv_fd = hash_get_fd_by_name(data->hash, t_name);
-					log_printf(LOG_DEBUG, "try to Send to %s by fd = %d\n", t_name, recv_fd);
-					if (recv_fd <= 0) {
-						//return error to the client.
-						send(sock_fd, recv_buf, BUFF_SIZE, 0);
-					}
-					log_printf(LOG_DEBUG, "sending to %d: %s\n", recv_fd, &buf[RECV_MIN]);
-					send(recv_fd, buf, recv_num, 0);
-					break;
-				default:
-					break;
-				}
-			}
-		}
+		conu_process(sock_fd, data->hash)
 		pthread_mutex_lock(&data->mutex);
 		data->user_count--;
 		pthread_mutex_unlock(&data->mutex);

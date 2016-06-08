@@ -1,8 +1,9 @@
 #ifndef __HASH_H
 #define __HASH_H
 #include <pthread.h>
-#include "server.h"
 
+#define NAME_MAX 16
+#define SERVICE_PORT 5555
 struct usr_info {
 	char name[NAME_MAX];
 	int fd;
