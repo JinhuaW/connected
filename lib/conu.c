@@ -51,6 +51,9 @@ int tp_reg(char *name, char *server_ip)
 	MSG *msg = msg_malloc(SOCK_REG, name, 0);
 	struct sockaddr_in server_addr;
 	int sockfd;
+	if (msg == NULL) {
+		return -1;
+	}
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		msg_free(msg);
 		return ERR_CREATE;
@@ -98,13 +101,30 @@ int tp_send(int fd, char *to, void *data, int size)
 
 int tp_recv(int fd, MSG *msg)
 {
-	int ret;
+	int ret, recv_num = 0;
+	int try = 0;
 	if (msg == NULL)
 		return -1;
-	ret = recv(fd, msg, msg->msg_size, 0);
-	if (ret < sizeof(MSG))
-		return -1;
-	msg->data_size = ret - sizeof(MSG);
+	while (try++ < MAX_TRY && recv_num < sizeof(MSG)) {
+		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
+		if (ret <= 0) {
+			log_printf(LOG_ERR, "socketed disconnected!\n");
+			return -1;
+		} else {
+			recv_num += ret;
+		}
+	}
+	while (try++ < MAX_TRY && recv_num < msg->msg_size) {
+		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
+		if (ret <= 0) {
+			log_printf(LOG_ERR, "socketed disconnected!\n");
+			return -1;
+		} else {
+			recv_num += ret;
+		}
+	}
+
+	msg->data_size = recv_num - sizeof(MSG);
 	return msg->data_size;
 }
 
@@ -125,30 +145,40 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 	if (NULL == msg)
 		return;
 	while (1) {
+		memset(msg, 0, sizeof(MSG) + BUFF_MAX);
 		recv_num = recv(sock_fd, msg, sizeof(MSG) + BUFF_MAX, 0);
 		if (recv_num == 0) {
-			if (reg_flag)
+			if (reg_flag) {
+				log_printf(LOG_DEBUG, "%s %d: remove usr (%s) from hash list\n", __FILE__, __LINE__, from);
 				hash_rm_user_by_name(hash, from);
+			}
 			close(sock_fd);
 			break;
 		} else {
-			if (recv_num < sizeof(MSG))
+			log_printf(LOG_DEBUG, "%s %d: recvied %d char\n", __FILE__, __LINE__, recv_num);
+			if (recv_num < sizeof(MSG)) {
+				log_printf(LOG_DEBUG, "%s %d: recv_num(%d) < MSG_size(%d)\n", __FILE__, __LINE__, recv_num, sizeof(MSG));
 				return;
-
-			if (msg->magic[0] != 0xAA || msg->magic[1] != 0x55)
+			}
+			if ((msg->magic[0] & 0xFF) != 0xAA || (msg->magic[1] & 0xFF) != 0x55) {
+				log_printf(LOG_DEBUG, "%s %d: unknown magic num(0x%02x,0x%02x)\n", __FILE__, __LINE__, msg->magic[0], msg->magic[1]);
 				return;
-
+			}
 			switch (msg->ctrl) {
 			case SOCK_REG:
 				memcpy(from, msg->name, NAME_MAX);
+				log_printf(LOG_DEBUG, "%s %d: new user (%s) registered\n", __FILE__, __LINE__, from);
 				hash_add_user(hash, from, sock_fd);
 				reg_flag = 1;
 				break;
 			case SOCK_SND:
-				if (recv_num != msg->msg_size)
-					break;	
+				if (recv_num != msg->msg_size) {
+					log_printf(LOG_ERR, "%s %d: recv_num = %d , msg_size = %d\n", __FILE__, __LINE__, recv_num, msg->msg_size);
+					break;
+				}
 				msg_update_size(msg, recv_num);
 				memcpy(to, msg->name, NAME_MAX);
+				log_printf(LOG_DEBUG, "%s %d: %s is sending %s to %s\n", __FILE__, __LINE__, from, msg->data, to);
 				recv_fd = hash_get_fd_by_name(hash, to);
 				if (tp_transfer(recv_fd, from, msg) < 0) {
 					msg_free(msg);
@@ -156,8 +186,8 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 				}
 				break;
 			default:
+				log_printf(LOG_DEBUG, "%s %d: unknown ctrl command (0x%02x)\n", __FILE__, __LINE__, msg->ctrl);
 				return;
-				break;
 			}
 		}
 	}

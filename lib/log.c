@@ -7,7 +7,7 @@
 
 #define LOG_BUFF_SIZE   1024
 
-static int log_level = LOG_ERR;
+static int log_level = LOG_DEBUG;
 
 void log_printf(int level, const char *string, ...)
 {

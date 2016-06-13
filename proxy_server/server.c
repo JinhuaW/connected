@@ -9,10 +9,10 @@
 #include <netinet/in.h> 
 #include <stdlib.h>
 #include <stdarg.h>
-#include "hash.h"
-#include "conu.h"
+#include <hash.h>
+#include <conu.h>
 #include "server.h"
-#include "log.h"
+#include <log.h>
 
 void *accept_thread(void *arg)
 {
@@ -68,7 +68,7 @@ void *process_thread(void *arg)
 			usleep(10);
 		sock_fd = data->new_user_fd;
 		data->new_user_fd = 0;
-		conu_process(sock_fd, data->hash)
+		conu_process(sock_fd, data->hash);
 		pthread_mutex_lock(&data->mutex);
 		data->user_count--;
 		pthread_mutex_unlock(&data->mutex);

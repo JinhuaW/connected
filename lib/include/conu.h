@@ -18,7 +18,7 @@
 #define ERR_CREATE	-1
 #define ERR_CONNECT -2
 #define ERR_SEND	-3
-
+#define MAX_TRY 5
 typedef struct msg {
 	char magic[2];
 	char ctrl;

@@ -1,4 +1,4 @@
-SRCS := server.c hash.c
+SRCS := $(shell ls *.c)
 OBJS := $(SRCS:%.c=%.o)
 
 CFLAGS += -I$(TOPDIR)/lib/include
