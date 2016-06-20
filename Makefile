@@ -11,10 +11,11 @@ include .config
 
 all:
 	$(MAKE) all -e -C lib 
+	$(MAKE) all -e -C tools
 	$(MAKE) all -e -C proxy_server
+	$(MAKE) all -e -C web_server
 	$(MAKE) all -e -C boards/common
 	$(MAKE) all -e -C boards/$(CONFIG_BOARD)
-	$(MAKE) all -e -C web_server
 
 clean:
 	$(MAKE) clean -e -C lib 

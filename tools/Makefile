@@ -1,7 +1,7 @@
-SRCS := $(shell ls *.c)
+SRCS := echo.c
 OBJS := $(SRCS:%.c=%.o)
 
-PROGRAM=exchange
+PROGRAM=echo
 LIBS += -lx -lpthread
 
 all: $(PROGRAM)
