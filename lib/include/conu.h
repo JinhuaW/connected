@@ -1,6 +1,7 @@
 #ifndef __TRANSPORT_H__
 #define __TRANSPORT_H__
 #include "hash.h"
+#include <stdint.h>
 
 #define SOCK_REG 0x00
 #define SOCK_SND 0x01
@@ -23,10 +24,11 @@ typedef struct msg {
 	char magic[2];
 	char ctrl;
 	char name[NAME_MAX];
-	int msg_size;
-	int data_size;
+	uint32_t msg_size;
+	uint32_t data_size;
 	char data[0];
-}MSG;
+} __attribute__((packed)) MSG;
+
 
 MSG *msg_malloc(char ctrl, char *name, int size);
 void msg_free(MSG *msg);

@@ -25,20 +25,14 @@ MSG *msg_malloc(char ctrl, char *name, int size)
 	if (NULL != name)
 		memcpy(m_msg->name, name, NAME_MAX);
 	m_msg->ctrl = ctrl;
-	m_msg->data_size = size;
-	m_msg->msg_size = msg_size;
+	m_msg->data_size = htonl(size);
+	m_msg->msg_size = htonl(msg_size);
 	return m_msg;
 }
 
 void msg_update_name(MSG *msg, char *name)
 {
 	memcpy(msg->name, name, NAME_MAX);
-}
-
-void msg_update_size(MSG *msg, int size)
-{
-	msg->msg_size = size;
-	msg->data_size = size - sizeof(MSG);
 }
 
 void msg_free(MSG *msg)
@@ -69,7 +63,7 @@ int tp_reg(char *name, char *server_ip)
 		return ERR_CONNECT;
 	}
 
-	if (send(sockfd, msg, msg->msg_size, 0) <= 0) {
+	if (send(sockfd, msg, ntohl(msg->msg_size), 0) <= 0) {
 		msg_free(msg);
 		close(sockfd);
 		return ERR_SEND;
@@ -90,7 +84,7 @@ int tp_send(int fd, char *to, void *data, int size)
 	if (NULL == msg)
 		return -1;
 	memcpy(msg->data, data, size);
-	ret = send(fd, msg, msg->msg_size, 0);
+	ret = send(fd, msg, ntohl(msg->msg_size), 0);
 	msg_free(msg);
 	return ret;
 }
@@ -110,7 +104,7 @@ int tp_recv(int fd, MSG *msg)
 			recv_num += ret;
 		}
 	}
-	while (try++ < MAX_TRY && recv_num < msg->msg_size) {
+	while (try++ < MAX_TRY && recv_num < ntohl(msg->msg_size)) {
 		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
 		if (ret <= 0) {
 			log_printf(LOG_ERR, "socketed disconnected!\n");
@@ -126,7 +120,7 @@ int tp_recv(int fd, MSG *msg)
 		log_printf(LOG_DEBUG, "%s %d: unknown magic num(0x%02x,0x%02x)\n", __FILE__, __LINE__, msg->magic[0], msg->magic[1]);
 		return 0;
 	}
-	return msg->data_size;
+	return ntohl(msg->data_size);
 }
 
 
@@ -134,7 +128,7 @@ int tp_recv(int fd, MSG *msg)
 static int tp_transfer(int fd, char *to, MSG *msg)
 {
 	msg_update_name(msg, to);
-	return send(fd, msg, msg->msg_size, 0);
+	return send(fd, msg, ntohl(msg->msg_size), 0);
 }
 
 //process msg
@@ -158,9 +152,7 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 				memcpy(to, msg->name, NAME_MAX);
 				log_printf(LOG_DEBUG, "%s %d: %s is sending %s to %s\n", __FILE__, __LINE__, from, msg->data, to);
 				recv_fd = hash_get_fd_by_name(hash, to);
-				if (tp_transfer(recv_fd, from, msg) < 0) {
-					goto exit;
-				}
+				tp_transfer(recv_fd, from, msg);
 				break;
 			default:
 				log_printf(LOG_DEBUG, "%s %d: unknown ctrl command (0x%02x)\n", __FILE__, __LINE__, msg->ctrl);
