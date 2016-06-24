@@ -11,5 +11,8 @@ clean:
 	@rm -rf $(LIBOBJ)
 	@rm -rf $(OBJS)
 
+%.o:%.c
+	$(CROSS_COMPILE)gcc $(CFLAGS) -c  $< -o $@
+
 $(LIBOBJ): $(OBJS)
-	$(AR) rcs $@ $^
+	$(CROSS_COMPILE)ar rcs $@ $^

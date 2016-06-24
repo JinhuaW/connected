@@ -13,5 +13,8 @@ clean:
 	@rm -rf $(OBJS)
 	@rm -rf $(PROGRAM)
 
+%.o:%.c
+	$(CROSS_COMPILE)gcc $(CFLAGS) -c  $< -o $@
+
 $(PROGRAM): $(OBJS)
-	$(CC) $(LIBPATH) -o $@ $^ $(LIBS)
+	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
