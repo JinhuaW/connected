@@ -15,6 +15,11 @@ all:
 	$(MAKE) all -e -C proxy_server
 	$(MAKE) all -e -C web_server
 
+install:
+	$(MAKE) install -e -C tools
+	$(MAKE) install -e -C web_server
+	$(MAKE) install -e -C proxy_server
+
 clean:
 	$(MAKE) clean -e -C lib 
 	$(MAKE) clean -e -C proxy_server

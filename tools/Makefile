@@ -16,3 +16,5 @@ $(PROGRAM): $(OBJS)
 clean:
 	@rm -rf $(OBJS)
 	@rm -rf $(PROGRAM)
+install:
+	cp $(PROGRAM) $(TOPDIR)/output

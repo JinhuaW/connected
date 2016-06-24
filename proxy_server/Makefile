@@ -18,3 +18,6 @@ clean:
 
 $(PROGRAM): $(OBJS)
 	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
+
+install:
+	@cp $(PROGRAM) $(TOPDIR)/output

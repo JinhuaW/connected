@@ -41,7 +41,7 @@
     	echo "发送的内容为:<font color='red'>$in</font> <br>";   
     }   
       
-    if ($out = socket_read($socket, 8192))   
+    if ($out = socket_read($socket, 5555))   
     {   
     	echo "接收服务器回传信息成功！<br>";   
     	echo "接受的内容为:".$out."<br>";   
