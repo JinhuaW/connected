@@ -1,11 +1,12 @@
 ARCH          ?=
 CROSS_COMPILE ?=
+HTML_INST_ROOT ?= /var/www
 
 TOPDIR=$(PWD)
 LIBPATH += -L$(TOPDIR)/lib
 CFLAGS += -I. -I$(TOPDIR)/lib/include -I$(TOPDIR)/boards/include
 
-export TOPDIR LIBPATH CFLAGS CROSS_COMPILE
+export TOPDIR LIBPATH CFLAGS CROSS_COMPILE HTML_INST_ROOT
 
 include .config
 

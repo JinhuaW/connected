@@ -13,6 +13,7 @@
 #include <conu.h>
 #include "server.h"
 #include <log.h>
+#include <time_info.h>
 
 void *accept_thread(void *arg)
 {

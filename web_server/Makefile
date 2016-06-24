@@ -15,4 +15,4 @@ clean:
 $(PROGRAM): $(OBJS)
 	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
 install:
-	sudo cp $(PROGRAM) index.html action.php /var/www/
+	sudo cp $(PROGRAM) index.html action.php $(HTML_INST_ROOT)
