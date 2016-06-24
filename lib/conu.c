@@ -1,6 +1,7 @@
 #include "conu.h"
 #include "hash.h"
 #include "log.h"
+#include "time_info.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -93,12 +94,12 @@ int tp_recv(int fd, MSG *msg)
 {
 	int ret, recv_num = 0;
 	int try = 0;
+	char cur_time[BUFF_MAX];
 	if (msg == NULL)
 		return -1;
 	while (try++ < MAX_TRY && recv_num < sizeof(MSG)) {
 		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
 		if (ret <= 0) {
-			log_printf(LOG_ERR, "socketed disconnected!\n");
 			return -1;
 		} else {
 			recv_num += ret;
@@ -107,7 +108,6 @@ int tp_recv(int fd, MSG *msg)
 	while (try++ < MAX_TRY && recv_num < ntohl(msg->msg_size)) {
 		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
 		if (ret <= 0) {
-			log_printf(LOG_ERR, "socketed disconnected!\n");
 			return -1;
 		} else {
 			recv_num += ret;
@@ -117,7 +117,7 @@ int tp_recv(int fd, MSG *msg)
 		return -1;
 	}
 	if ((msg->magic[0] & 0xFF) != 0xAA || (msg->magic[1] & 0xFF) != 0x55) {
-		log_printf(LOG_DEBUG, "%s %d: unknown magic num(0x%02x,0x%02x)\n", __FILE__, __LINE__, msg->magic[0], msg->magic[1]);
+		log_printf(LOG_DEBUG, "[%s]unknown magic num(0x%02x,0x%02x)\n", get_cur_time(cur_time), msg->magic[0], msg->magic[1]);
 		return 0;
 	}
 	return ntohl(msg->data_size);
@@ -135,7 +135,7 @@ static int tp_transfer(int fd, char *to, MSG *msg)
 void conu_process(int sock_fd, struct usr_hash *hash)
 {
 	int recv_num, reg_flag = 0, recv_fd;
-	char from[NAME_MAX_LEN] = {}, to[NAME_MAX_LEN] = {};
+	char from[NAME_MAX_LEN] = {}, to[NAME_MAX_LEN] = {}, cur_time[BUFF_MAX];
 	MSG *msg = msg_malloc(0, NULL, BUFF_MAX);
 	if (NULL == msg)
 		return;
@@ -144,18 +144,18 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 		switch (msg->ctrl) {
 			case SOCK_REG:
 				memcpy(from, msg->name, NAME_MAX_LEN);
-				log_printf(LOG_DEBUG, "%s %d: new user (%s) registered\n", __FILE__, __LINE__, from);
+				log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
 				hash_add_user(hash, from, sock_fd);
 				reg_flag = 1;
 				break;
 			case SOCK_SND:
 				memcpy(to, msg->name, NAME_MAX_LEN);
-				log_printf(LOG_DEBUG, "%s %d: %s is sending %s to %s\n", __FILE__, __LINE__, from, msg->data, to);
+				log_printf(LOG_DEBUG, "[%s]usr(%s) is sending \"%s\" to usr(%s)\n", get_cur_time(cur_time), from, msg->data, to);
 				recv_fd = hash_get_fd_by_name(hash, to);
 				tp_transfer(recv_fd, from, msg);
 				break;
 			default:
-				log_printf(LOG_DEBUG, "%s %d: unknown ctrl command (0x%02x)\n", __FILE__, __LINE__, msg->ctrl);
+				log_printf(LOG_DEBUG, "[%s]unknown ctrl command (0x%02x)\n", get_cur_time(cur_time), msg->ctrl);
 				goto exit;
 		}
 		memset(msg, 0, sizeof(MSG) + BUFF_MAX);
@@ -164,7 +164,7 @@ exit:
 	msg_free(msg);
 	close(sock_fd);
 	if (reg_flag) {
-		log_printf(LOG_DEBUG, "%s %d: remove usr (%s) from hash list\n", __FILE__, __LINE__, from);
+		log_printf(LOG_DEBUG, "[%s]remove usr (%s) from hash list\n", get_cur_time(cur_time), from);
 		hash_rm_user_by_name(hash, from);
 	}
 	return;
@@ -174,7 +174,8 @@ int new_server(int port, int max_user)
 {
 	struct sockaddr_in host_addr;
 	int listen_sock = 0;
-
+	char cur_time[BUFF_MAX];
+	
 	memset((void *)&host_addr, 0, sizeof(struct sockaddr_in));
 	host_addr.sin_family = AF_INET;
 	host_addr.sin_port = htons(SERVICE_PORT);
@@ -182,15 +183,15 @@ int new_server(int port, int max_user)
 	
 	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock < 0) {
-		log_printf(LOG_CRIT, "%s %d:create socked failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "[%s]create socked failed, %s\n", get_cur_time(cur_time), strerror(errno));
 		return -1;
 	}
 	if (bind(listen_sock, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0) {
-		log_printf(LOG_CRIT, "%s %d:bind socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "[%s]bind socket failed, %s\n", get_cur_time(cur_time), strerror(errno));
 		return -1;
 	}
 	if (listen(listen_sock, max_user) < 0) {
-		log_printf(LOG_CRIT, "%s %d:listen socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+		log_printf(LOG_CRIT, "[%s]listen socket failed, %s\n", get_cur_time(cur_time), strerror(errno));
 		return -1;
 	}
 	return listen_sock;

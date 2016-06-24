@@ -20,6 +20,7 @@ void *accept_thread(void *arg)
 	struct sockaddr_in client_addr;
 	int listen_sock = 0;
 	int sock_len = sizeof(client_addr);
+	char cur_time[BUFF_MAX];
 
 	listen_sock = new_server(SERVICE_PORT, data->max_user);
 	if (listen_sock < 0) {
@@ -35,10 +36,10 @@ void *accept_thread(void *arg)
 			data->new_user_fd = accept(listen_sock, (struct sockaddr *)&client_addr, &sock_len);
 			if (data->new_user_fd < 0) {
 				data->new_user_fd = 0;
-				log_printf(LOG_ERR, "%s %d: accpet new socket failed, %s\n", __FILE__, __LINE__, strerror(errno));
+				log_printf(LOG_ERR, "[%s]Accpet new socket failed, %s\n", get_cur_time(cur_time), strerror(errno));
 				continue;
 			}
-			log_printf(LOG_DEBUG, "%s %d: Create sock fd %d\n", __FILE__, __LINE__, data->new_user_fd);
+			log_printf(LOG_DEBUG, "[%s]Create sock fd %d\n", get_cur_time(cur_time), data->new_user_fd);
 			pthread_mutex_lock(&data->mutex);
 			data->user_count++;
 			pthread_cond_signal(&data->cond);
@@ -46,7 +47,7 @@ void *accept_thread(void *arg)
 			
 		} else {
 			pthread_mutex_unlock(&data->mutex);
-			log_printf(LOG_WARNING, "%s %d: Server is now full\n", __FILE__, __LINE__);
+			log_printf(LOG_WARNING, "[%s]Server is now full\n", get_cur_time(cur_time));
 			usleep(10);
 		} 	
 	}
