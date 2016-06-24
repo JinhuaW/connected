@@ -23,7 +23,7 @@
 typedef struct msg {
 	char magic[2];
 	char ctrl;
-	char name[NAME_MAX];
+	char name[NAME_MAX_LEN];
 	uint32_t msg_size;
 	uint32_t data_size;
 	char data[0];

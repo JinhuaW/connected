@@ -23,7 +23,7 @@ MSG *msg_malloc(char ctrl, char *name, int size)
 	m_msg->magic[0] = 0xAA;
 	m_msg->magic[1] = 0x55;
 	if (NULL != name)
-		memcpy(m_msg->name, name, NAME_MAX);
+		memcpy(m_msg->name, name, NAME_MAX_LEN);
 	m_msg->ctrl = ctrl;
 	m_msg->data_size = htonl(size);
 	m_msg->msg_size = htonl(msg_size);
@@ -32,7 +32,7 @@ MSG *msg_malloc(char ctrl, char *name, int size)
 
 void msg_update_name(MSG *msg, char *name)
 {
-	memcpy(msg->name, name, NAME_MAX);
+	memcpy(msg->name, name, NAME_MAX_LEN);
 }
 
 void msg_free(MSG *msg)
@@ -135,7 +135,7 @@ static int tp_transfer(int fd, char *to, MSG *msg)
 void conu_process(int sock_fd, struct usr_hash *hash)
 {
 	int recv_num, reg_flag = 0, recv_fd;
-	char from[NAME_MAX] = {}, to[NAME_MAX] = {};
+	char from[NAME_MAX_LEN] = {}, to[NAME_MAX_LEN] = {};
 	MSG *msg = msg_malloc(0, NULL, BUFF_MAX);
 	if (NULL == msg)
 		return;
@@ -143,13 +143,13 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 	while ( tp_recv(sock_fd, msg) >= 0 ) {
 		switch (msg->ctrl) {
 			case SOCK_REG:
-				memcpy(from, msg->name, NAME_MAX);
+				memcpy(from, msg->name, NAME_MAX_LEN);
 				log_printf(LOG_DEBUG, "%s %d: new user (%s) registered\n", __FILE__, __LINE__, from);
 				hash_add_user(hash, from, sock_fd);
 				reg_flag = 1;
 				break;
 			case SOCK_SND:
-				memcpy(to, msg->name, NAME_MAX);
+				memcpy(to, msg->name, NAME_MAX_LEN);
 				log_printf(LOG_DEBUG, "%s %d: %s is sending %s to %s\n", __FILE__, __LINE__, from, msg->data, to);
 				recv_fd = hash_get_fd_by_name(hash, to);
 				tp_transfer(recv_fd, from, msg);

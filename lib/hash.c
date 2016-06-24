@@ -80,7 +80,7 @@ int hash_add_user(struct usr_hash *hash, char *name, int fd)
 	}
 	hash->usr[index].flag = 1;
 	hash->usr[index].fd = fd;
-	memcpy(hash->usr[index].name, name, NAME_MAX);
+	memcpy(hash->usr[index].name, name, NAME_MAX_LEN);
 	pthread_rwlock_unlock(&hash->rwlock);	
 	return 0;
 }
@@ -99,7 +99,7 @@ int hash_rm_user_by_name(struct usr_hash *hash, char *name)
 		index = (index + 1) % hash->max_usr;
 	}
 	hash->usr[index].flag = 0;
-	memset(hash->usr[index].name, 0, NAME_MAX);
+	memset(hash->usr[index].name, 0, NAME_MAX_LEN);
 	pthread_rwlock_unlock(&hash->rwlock);	
 	return 0;
 }

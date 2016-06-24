@@ -2,10 +2,10 @@
 #define __HASH_H
 #include <pthread.h>
 
-#define NAME_MAX 16
+#define NAME_MAX_LEN 16
 #define SERVICE_PORT 5555
 struct usr_info {
-	char name[NAME_MAX];
+	char name[NAME_MAX_LEN];
 	int fd;
 	int flag;
 };
