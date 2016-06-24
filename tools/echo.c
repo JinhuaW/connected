@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 	MSG *msg = NULL;
 	char data[BUFF_MAX];
 	int n;
-	if (argc != 2) {
+	if (argc != 3) {
 		printf("Usage: %s usr_name server_ip\n", argv[0]);
 		return -1;
 	}
