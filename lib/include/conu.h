@@ -43,7 +43,7 @@ int tp_recv(int fd, MSG *msg);
 void conu_process(int sock_fd, struct usr_hash *hash);
 int new_server(int port, int max_user);
 
-void msg_update_size(MSG *msg, int size);
+int msg_update_size(MSG *msg, int size);
 void msg_update_name(MSG *msg, char *name);
 MSG *msg_malloc(char ctrl, char *name, int size);
 void msg_free(MSG *msg);

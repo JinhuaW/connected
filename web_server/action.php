@@ -7,7 +7,10 @@ if (empty($login_name) || empty($target_name) || empty($message)) {
 } else {
 	$result = exec("./exchange $login_name $target_name \"$message\"", $output, $var);
 	if ($var == 0) {
-		echo "Recv: $output[0]<br/>";
+		//echo "Recv: $output[0]<br/>";
+		foreach ($output as $file) {
+			echo "$file<br/>";
+		}
 	} else {
 		echo "Recv Error!<br>";
 	}

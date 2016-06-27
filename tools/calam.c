@@ -9,7 +9,7 @@
 #include <ctype.h>
 #include <signal.h>
 
-#define DEFAULT_TTY "/isam/slot_default/run/tty1_ext"
+#define DEFAULT_TTY "./tty1_ext"
 #define PROGRAM "calamares"
 #define VERSION "1.6"
 

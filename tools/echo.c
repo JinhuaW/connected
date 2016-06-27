@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	while (1) {
-		memset(msg, 0, sizeof(MSG));
+		memset(msg, 0, sizeof(MSG) + BUFF_MAX);
 		if (tp_recv(fd, msg) <= 0) {
 			printf("Failed to recv msg\n");
 			tp_exit(fd);

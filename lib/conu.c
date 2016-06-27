@@ -36,6 +36,15 @@ void msg_update_name(MSG *msg, char *name)
 	memcpy(msg->name, name, NAME_MAX_LEN);
 }
 
+int msg_update_size(MSG *msg, int size)
+{
+	if (size < 0 || size > BUFF_MAX)
+		return -1;
+	msg->msg_size = htonl(size + sizeof(MSG));
+	msg->data_size = htonl(size);
+	return 0;
+}
+
 void msg_free(MSG *msg)
 {
 	free(msg);

@@ -1,16 +1,22 @@
-SRCS := echo.c
+SRCS := $(shell ls *.c)
 OBJS := $(SRCS:%.c=%.o)
 
-PROGRAM=echo
+PROGRAM=echo calam remote_exec
 LIBS += -lx -lpthread
 
-all: $(PROGRAM)
+all:echo calam remote_exec
 
 
-echo.o:echo.c
+%.o:%.c
 	$(CROSS_COMPILE)gcc $(CFLAGS) -c  $< -o $@
 
-$(PROGRAM): $(OBJS)
+echo:echo.o
+	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
+
+calam:calam.o
+	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
+
+remote_exec:remote_exec.o
 	$(CROSS_COMPILE)gcc $(LIBPATH) -o $@ $^ $(LIBS)
 
 clean:

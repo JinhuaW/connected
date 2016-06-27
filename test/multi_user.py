@@ -29,4 +29,4 @@ def main(clientnum, testnum):
 		threads[num].join()
 
 if __name__=='__main__':
-	main(10, 1000)  
+	main(3, 1000)  
