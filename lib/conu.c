@@ -46,6 +46,7 @@ int tp_reg(char *name, char *server_ip)
 	MSG *msg = msg_malloc(SOCK_REG, name, 0);
 	struct sockaddr_in server_addr;
 	int sockfd;
+	char buff[BUFF_MAX];
 	if (msg == NULL) {
 		return -1;
 	}
@@ -68,6 +69,13 @@ int tp_reg(char *name, char *server_ip)
 		msg_free(msg);
 		close(sockfd);
 		return ERR_SEND;
+	}
+	if (recv(sockfd, buff, BUFF_MAX, 0) > 0 && strcmp(buff, "done") == 0) {
+		
+	} else {
+		msg_free(msg);
+		close(sockfd);
+		return -1;
 	}
 	msg_free(msg);
 	return sockfd;
@@ -144,15 +152,26 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 		switch (msg->ctrl) {
 			case SOCK_REG:
 				memcpy(from, msg->name, NAME_MAX_LEN);
-				log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
-				hash_add_user(hash, from, sock_fd);
-				reg_flag = 1;
+				log_printf(LOG_DEBUG, "[%s]new usr (%s) is trying to register\n", get_cur_time(cur_time), from);
+				if (hash_add_user(hash, from, sock_fd) == 0) {
+					log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
+					reg_flag = 1;
+				} else {
+					goto exit;
+				}
+				if (send(sock_fd, "done", 5, 0) != 5)
+					goto exit;
 				break;
 			case SOCK_SND:
-				memcpy(to, msg->name, NAME_MAX_LEN);
-				log_printf(LOG_DEBUG, "[%s]usr(%s) is sending \"%s\" to usr(%s)\n", get_cur_time(cur_time), from, msg->data, to);
-				recv_fd = hash_get_fd_by_name(hash, to);
-				tp_transfer(recv_fd, from, msg);
+				if (reg_flag) {
+					memcpy(to, msg->name, NAME_MAX_LEN);
+					log_printf(LOG_DEBUG, "[%s]usr(%s) is sending \"%s\" to usr(%s)\n", get_cur_time(cur_time), from, msg->data, to);
+					recv_fd = hash_get_fd_by_name(hash, to);
+					if (recv_fd > 0)
+						tp_transfer(recv_fd, from, msg);
+				} else {
+					goto exit;	
+				}
 				break;
 			default:
 				log_printf(LOG_DEBUG, "[%s]unknown ctrl command (0x%02x)\n", get_cur_time(cur_time), msg->ctrl);

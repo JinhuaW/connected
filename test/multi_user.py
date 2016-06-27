@@ -5,14 +5,16 @@ import os
 
 def run(testid, testnum):
 	cnt = 0
+	err_cnt = 0
 	command = "../web_server/exchange"
 	while cnt<testnum:
 		command += ' ' +  testid + ' echo'
-		command += ' \"' + time.asctime(time.localtime(time.time())) + '\"'
+		command += ' \"' + time.asctime(time.localtime(time.time())) + '\" >/dev/null'
 		n = os.system(command)
 		if (n != 0):
-			print command + ' Failed'
+			err_cnt += 1	
 		cnt += 1
+	print testid,'total missed',err_cnt
 
 def main(clientnum, testnum):
 	threads = []
@@ -27,4 +29,4 @@ def main(clientnum, testnum):
 		threads[num].join()
 
 if __name__=='__main__':
-	main(100, 10)  
+	main(10, 1000)  
