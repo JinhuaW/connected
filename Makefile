@@ -8,7 +8,7 @@ CFLAGS += -I. -I$(TOPDIR)/lib/include -I$(TOPDIR)/boards/include
 
 export TOPDIR LIBPATH CFLAGS CROSS_COMPILE HTML_INST_ROOT
 
-include .config
+-include .config
 
 all:
 	$(MAKE) all -e -C lib 

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 #define BUFFER_SIZE 1024
 #define  CR      0x0D
