@@ -52,42 +52,42 @@ void msg_free(MSG *msg)
 
 int tp_reg(char *name, char *server_ip)
 {
-	MSG *msg = msg_malloc(SOCK_REG, name, 0);
+	MSG *msg = msg_malloc(SOCK_LOGIN, name, 0);
 	struct sockaddr_in server_addr;
 	int sockfd;
 	char buff[BUFF_MAX];
-	if (msg == NULL) {
+	if (msg == NULL)
 		return -1;
-	}
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		msg_free(msg);
-		return ERR_CREATE;
-	}
+
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+		goto exit2;
+
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(SERVICE_PORT);
 	inet_pton(AF_INET, server_ip, &server_addr.sin_addr);
 
-	if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-		msg_free(msg);
-		close(sockfd);
-		return ERR_CONNECT;
-	}
+	if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+		goto exit1;
 
-	if (send(sockfd, msg, ntohl(msg->msg_size), 0) <= 0) {
-		msg_free(msg);
-		close(sockfd);
-		return ERR_SEND;
-	}
+	if (send(sockfd, msg, sizeof(MSG), 0) <= 0)
+		goto exit1;
+
 	if (recv(sockfd, buff, BUFF_MAX, 0) > 0 && strcmp(buff, "done") == 0) {
-		
+		msg->ctrl = SOCK_LOGIN_CONFIRM;
+		if (send(sockfd, msg, sizeof(MSG), 0) <= 0)
+			goto exit1;
 	} else {
-		msg_free(msg);
-		close(sockfd);
-		return -1;
+		goto exit1;
 	}
+	usleep(200000);
 	msg_free(msg);
 	return sockfd;
+exit1:
+	close(sockfd);
+exit2:
+	msg_free(msg);
+	return -1;
 }
 
 int tp_exit(int fd)
@@ -109,14 +109,17 @@ int tp_send(int fd, char *to, void *data, int size)
 
 int tp_recv(int fd, MSG *msg)
 {
-	int ret, recv_num = 0;
-	int try = 0;
+	int ret, recv_num = 0, try = 0;
 	char cur_time[BUFF_MAX];
 	if (msg == NULL)
 		return -1;
 	while (try++ < MAX_TRY && recv_num < sizeof(MSG)) {
 		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
 		if (ret <= 0) {
+			if (ret == -1)
+				log_printf(LOG_DEBUG, "[%s]Recv Error: %s\n", get_cur_time(cur_time), strerror(errno));
+			else
+				log_printf(LOG_DEBUG, "[%s]fd = %d is closing\n", get_cur_time(cur_time), fd);
 			return -1;
 		} else {
 			recv_num += ret;
@@ -125,6 +128,11 @@ int tp_recv(int fd, MSG *msg)
 	while (try++ < MAX_TRY && recv_num < ntohl(msg->msg_size)) {
 		ret = recv(fd, msg + recv_num, sizeof(MSG) + BUFF_MAX, 0);
 		if (ret <= 0) {
+			if (ret == -1)
+				log_printf(LOG_DEBUG, "[%s]Recv Error: %s\n", get_cur_time(cur_time), strerror(errno));
+			else
+				log_printf(LOG_DEBUG, "[%s]fd = %d is closing\n", get_cur_time(cur_time), fd);
+			
 			return -1;
 		} else {
 			recv_num += ret;
@@ -151,7 +159,7 @@ static int tp_transfer(int fd, char *to, MSG *msg)
 //process msg
 void conu_process(int sock_fd, struct usr_hash *hash)
 {
-	int recv_num, reg_flag = 0, recv_fd;
+	int recv_num, reg_flag = 0, recv_fd, login = 0;
 	char from[NAME_MAX_LEN] = {}, to[NAME_MAX_LEN] = {}, cur_time[BUFF_MAX];
 	MSG *msg = msg_malloc(0, NULL, BUFF_MAX);
 	if (NULL == msg)
@@ -159,17 +167,25 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 	memset(msg, 0, sizeof(MSG) + BUFF_MAX);
 	while ( tp_recv(sock_fd, msg) >= 0 ) {
 		switch (msg->ctrl) {
-			case SOCK_REG:
+			case SOCK_LOGIN:
 				memcpy(from, msg->name, NAME_MAX_LEN);
 				log_printf(LOG_DEBUG, "[%s]new usr (%s) is trying to register\n", get_cur_time(cur_time), from);
-				if (hash_add_user(hash, from, sock_fd) == 0) {
-					log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
-					reg_flag = 1;
-				} else {
-					goto exit;
-				}
 				if (send(sock_fd, "done", 5, 0) != 5)
 					goto exit;
+				login = 1;
+				break;
+			case SOCK_LOGIN_CONFIRM:
+				if (login && !reg_flag && strcmp(from, msg->name) == 0) {
+					if (hash_add_user(hash, from, sock_fd) == 0) {
+						log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
+						reg_flag = 1;
+					} else {
+						goto exit;
+					}
+				} else {
+					log_printf(LOG_DEBUG, "[%s] fd(%d) is recving confirm form %s \n", get_cur_time(cur_time), sock_fd,  msg->name);
+					goto exit;
+				}
 				break;
 			case SOCK_SND:
 				if (reg_flag) {

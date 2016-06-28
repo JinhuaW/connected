@@ -3,9 +3,10 @@
 #include "hash.h"
 #include <stdint.h>
 
-#define SOCK_REG 0x00
-#define SOCK_SND 0x01
-#define ERR_NOFD 0x02
+#define SOCK_LOGIN 0x00
+#define SOCK_LOGIN_CONFIRM 0x01
+#define SOCK_SND 0x02
+#define ERR_NOFD 0x03
 
 //feed back code
 #define SND_SUCCESS 0xF0
