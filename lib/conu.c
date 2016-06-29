@@ -56,6 +56,7 @@ int tp_reg(char *name, char *server_ip)
 	struct sockaddr_in server_addr;
 	int sockfd;
 	char buff[BUFF_MAX];
+	char cur_time[BUFF_MAX];
 	if (msg == NULL)
 		return -1;
 
@@ -66,15 +67,17 @@ int tp_reg(char *name, char *server_ip)
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(SERVICE_PORT);
 	inet_pton(AF_INET, server_ip, &server_addr.sin_addr);
-
+	log_printf(LOG_DEBUG, "[%s]%s is connecting to server %s\n", get_cur_time(cur_time), name, server_ip );
 	if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
 		goto exit1;
-
+	
+	log_printf(LOG_DEBUG, "[%s]%s is sending login info to server %s\n", get_cur_time(cur_time), name, server_ip );
 	if (send(sockfd, msg, sizeof(MSG), 0) <= 0)
 		goto exit1;
-
+	log_printf(LOG_DEBUG, "[%s]%s is waiting the done info\n", get_cur_time(cur_time), name);
 	if (recv(sockfd, buff, BUFF_MAX, 0) > 0 && strcmp(buff, "done") == 0) {
 		msg->ctrl = SOCK_LOGIN_CONFIRM;
+		log_printf(LOG_DEBUG, "[%s]%s is sending the confirm info\n", get_cur_time(cur_time), name);
 		if (send(sockfd, msg, sizeof(MSG), 0) <= 0)
 			goto exit1;
 	} else {
@@ -175,15 +178,16 @@ void conu_process(int sock_fd, struct usr_hash *hash)
 				login = 1;
 				break;
 			case SOCK_LOGIN_CONFIRM:
+				log_printf(LOG_DEBUG, "[%s] fd(%d) is recving confirm from %s, login = %d, reg_flag =%s, from = %s, name = %s \n", get_cur_time(cur_time), sock_fd,  msg->name, login, reg_flag, from, msg->name);
 				if (login && !reg_flag && strcmp(from, msg->name) == 0) {
 					if (hash_add_user(hash, from, sock_fd) == 0) {
 						log_printf(LOG_DEBUG, "[%s]new usr (%s) registered\n", get_cur_time(cur_time), from);
 						reg_flag = 1;
 					} else {
+						log_printf(LOG_DEBUG, "[%s]add (%s) to hash failed\n", get_cur_time(cur_time), from);
 						goto exit;
 					}
 				} else {
-					log_printf(LOG_DEBUG, "[%s] fd(%d) is recving confirm form %s \n", get_cur_time(cur_time), sock_fd,  msg->name);
 					goto exit;
 				}
 				break;

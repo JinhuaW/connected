@@ -52,12 +52,8 @@ int main(int argc, char *argv[])
 			msg_update_size(msg, count);
 			pclose(fp);
 		}
-		if (tp_send(fd, msg->name, msg->data, strlen(msg->data) + 1) < 0) {
-			printf("Failed to send the msg back to user(%s)\n", msg->name);
-			msg_free(msg);
-			tp_exit(fd);
-			return -1;
-		}
+		if (count <= BUFF_MAX )
+			tp_send(fd, msg->name, msg->data, strlen(msg->data) + 1);
 	}
 	msg_free(msg);
 	tp_exit(fd);

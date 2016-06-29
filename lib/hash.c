@@ -74,8 +74,10 @@ int hash_add_user(struct usr_hash *hash, char *name, int fd)
 	limit = (hash_id + hash->max_usr -1) % hash->max_usr;
 	pthread_rwlock_wrlock(&hash->rwlock);	
 	while (hash->usr[index].flag) {
-		if (index == limit)
+		if (index == limit) {
+			pthread_rwlock_unlock(&hash->rwlock);	
 			return -1;
+		}
 		index = (index + 1) % hash->max_usr;
 	}
 	hash->usr[index].flag = 1;
@@ -94,8 +96,10 @@ int hash_rm_user_by_name(struct usr_hash *hash, char *name)
 	limit = (hash_id + hash->max_usr -1) % hash->max_usr;
 	pthread_rwlock_wrlock(&hash->rwlock);	
 	while (strcmp(name, hash->usr[index].name) || strlen(name) != strlen(hash->usr[index].name)) {
-		if (index == limit)
+		if (index == limit) {
+			pthread_rwlock_unlock(&hash->rwlock);	
 			return -1;
+		}
 		index = (index + 1) % hash->max_usr;
 	}
 	hash->usr[index].flag = 0;
@@ -114,8 +118,10 @@ int hash_get_fd_by_name(struct usr_hash *hash, char *name)
 	limit = (hash_id + hash->max_usr -1) % hash->max_usr;
 	pthread_rwlock_rdlock(&hash->rwlock);	
 	while (strcmp(name, hash->usr[index].name) || strlen(name) != strlen(hash->usr[index].name)) {
-		if (index == limit)
+		if (index == limit) {
+			pthread_rwlock_unlock(&hash->rwlock);
 			return -1;
+		}
 		index = (index + 1) % hash->max_usr;
 	}
 	fd = hash->usr[index].fd;
