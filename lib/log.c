@@ -5,7 +5,7 @@
 
 #include "log.h"
 
-#define LOG_BUFF_SIZE   1024
+#define LOG_BUFF_SIZE 2048
 
 static int log_level = LOG_DEBUG;
 
@@ -15,7 +15,7 @@ void log_printf(int level, const char *string, ...)
 	char buffer[LOG_BUFF_SIZE];
 
 	va_start(arg, string);
-	vsprintf(buffer, string, arg);
+	vsnprintf(buffer, LOG_BUFF_SIZE, string, arg);
 	va_end(arg);
 
 	if (level < LOG_DEBUG)
