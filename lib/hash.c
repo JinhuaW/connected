@@ -67,24 +67,29 @@ void hash_destory(struct usr_hash *hash)
 
 int hash_add_user(struct usr_hash *hash, char *name, int fd)
 {
-	int index, limit, hash_id = hash_calc(hash, name);
+	int index, limit, hash_id = hash_calc(hash, name), ret = -1;
 	if (hash_id < 0)
-		return -1;
+		goto exit2;
 	index = hash_id;
 	limit = (hash_id + hash->max_usr -1) % hash->max_usr;
 	pthread_rwlock_wrlock(&hash->rwlock);	
 	while (hash->usr[index].flag) {
-		if (index == limit) {
-			pthread_rwlock_unlock(&hash->rwlock);	
-			return -1;
-		}
+		if (strcmp(hash->usr[index].name, name) == 0 && strlen(hash->usr[index].name) == strlen(name))
+			goto exit1;
+
+		if (index == limit)
+			goto exit1;
+
 		index = (index + 1) % hash->max_usr;
 	}
 	hash->usr[index].flag = 1;
 	hash->usr[index].fd = fd;
 	memcpy(hash->usr[index].name, name, NAME_MAX_LEN);
-	pthread_rwlock_unlock(&hash->rwlock);	
-	return 0;
+	ret = 0;
+exit1:
+	pthread_rwlock_unlock(&hash->rwlock);
+exit2:
+	return ret;
 }
 
 int hash_rm_user_by_name(struct usr_hash *hash, char *name)
