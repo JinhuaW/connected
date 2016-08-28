@@ -1,4 +1,6 @@
-
+#include <stdlib.h>
+#include "rb_tree.h"
+#include <stdio.h>
 typedef enum rb_color {
 	BLACK = 0,
 	RED = 1
@@ -7,7 +9,7 @@ typedef enum rb_color {
 typedef struct rb_node {
 	struct rb_node *parent;
 	struct rb_node *left;
-	struct rb_node *next;
+	struct rb_node *right;
 	void *key_data;
 	CLR color;
 } RB_NODE;
@@ -16,6 +18,7 @@ typedef struct rb_root {
 	RB_NODE *root;
 	RB_NODE *nil;
 	compare_t compare;
+	show_t show;
 } RB_ROOT;
 
 
@@ -40,16 +43,15 @@ static void rb_left_rotate(RB_ROOT *T, RB_NODE *node)
 	}
 }
 
-static void rb_right_rotate(RB_ROOT *T, RB_NOE *node)
+static void rb_right_rotate(RB_ROOT *T, RB_NODE *node)
 {
 	if (node->left != T->nil) {
 		RB_NODE *y = node->left;
 		node->left = y->right;
-		y->parent = node->parent;
 		if (y->right != T->nil)
 			y->right->parent = node;
-		node->right = y->left;
-
+		
+		y->parent = node->parent;
 		if (node->parent == T->nil) {
 			T->root = y;
 		} else {
@@ -74,6 +76,7 @@ static void rb_insert_fixup(RB_ROOT *T, RB_NODE *z)
 				y->color = BLACK;
 				z->parent->color = BLACK;
 				z->parent->parent->color = RED;
+				z = z->parent->parent;
 			} else {
 				if (z == z->parent->right) {
 					z = z->parent;
@@ -89,6 +92,7 @@ static void rb_insert_fixup(RB_ROOT *T, RB_NODE *z)
 				y->color = BLACK;
 				z->parent->color = BLACK;
 				z->parent->parent->color = RED;
+				z = z->parent->parent;
 			} else {
 				if (z == z->parent->left) {
 					z = z->parent;
@@ -103,15 +107,16 @@ static void rb_insert_fixup(RB_ROOT *T, RB_NODE *z)
 	T->root->color = BLACK;
 }
 
-RB_ROOT *rb_create(int (*compare)(void *key1, void *key2))
+RB_ROOT *rb_create(compare_t compare, show_t show)
 {
 	RB_ROOT *T = NULL;
 	if (compare == NULL)
 		return NULL;
-	T = (RB_ROOT *)calloc(sizeof(RB_ROOT));
+	T = (RB_ROOT *)calloc(1, sizeof(RB_ROOT));
 	if (T == NULL)
 		return NULL;
 	T->compare = compare;
+	T->show = show;
 	return T;
 }
 
@@ -120,8 +125,8 @@ int rb_insert(RB_ROOT *T, void *key_data)
 	if (T == NULL || key_data == NULL)
 		return 1;
 	if (T->root == NULL) {
-		T->root = (RB_NODE *)calloc(sizeof(RB_NODE));
-		T->nil = (RB_NODE *)calloc(sizeof(RB_NODE));
+		T->root = (RB_NODE *)calloc(1, sizeof(RB_NODE));
+		T->nil = (RB_NODE *)calloc(1, sizeof(RB_NODE));
 		if (T->root == NULL || T->nil == NULL)
 			return 1;
 		T->nil->color = BLACK;
@@ -133,7 +138,7 @@ int rb_insert(RB_ROOT *T, void *key_data)
 	} else {
 		RB_NODE *x = T->root;
 		RB_NODE *p = T->nil;
-		while (x != nil) {
+		while (x != T->nil) {
 			p = x;
 			switch (T->compare(key_data, x->key_data)) {
 			case 1:
@@ -145,10 +150,11 @@ int rb_insert(RB_ROOT *T, void *key_data)
 			case 0:
 				return 0;
 			default:
+				printf("unknown compare result\n");
 				return 1;
 			}
 		}
-		x = (RB_NODE *)calloc(sizeof(RB_NODE));
+		x = (RB_NODE *)calloc(1, sizeof(RB_NODE));
 		if (x == NULL)
 			return 1;
 		x->parent = p;
@@ -165,3 +171,52 @@ int rb_insert(RB_ROOT *T, void *key_data)
 	return 0;
 }
 
+
+static __rb_show(RB_ROOT *T, RB_NODE *x, int level)
+{
+	if (x == T->nil)
+		return;
+	printf("curent: ");
+	T->show(level, x->key_data);
+	if (x->parent != T->nil) {
+		printf("parent: ");
+		T->show(level-1, x->parent->key_data);
+	}
+	if (x->left != T->nil) {
+		printf("left: ");
+		T->show(level+1, x->left->key_data);
+	}
+	if (x->right != T->nil) {
+		printf("right: ");
+		T->show(level+1, x->right->key_data);
+	}
+	printf("======================================\r\n");
+	__rb_show(T, x->left, level+1);
+	__rb_show(T, x->right, level+1);
+
+}
+
+void rb_show(RB_ROOT *T)
+{
+	if (T->show == NULL)
+		return;
+	__rb_show(T, T->root, 1);	
+}
+
+void *rb_find(RB_ROOT *T, void *key_data)
+{
+	int ret;
+	if (T == NULL || key_data == NULL)
+		return NULL;
+	RB_NODE *p = T->root;
+	while (p != T->nil) {
+		ret = T->compare(key_data, p->key_data);
+		if (ret == 0)
+			return p->key_data;
+		else if (ret == 1)
+			p = p->right;
+		else
+			p = p->left;
+	}
+	return NULL;
+}
